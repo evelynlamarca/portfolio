@@ -1,343 +1,76 @@
-// @ts-nocheck
-// Seção about
-const about = document.querySelector("#about");
+const GITHUB_USER = "evelynlamarca";
 
-// Seção projects
-const swiperWrapper = document.querySelector(".swiper-wrapper");
+async function initializeApp() {
+    try {
+        const [userRes, repoRes] = await Promise.all([
+            fetch(`https://api.github.com/users/${GITHUB_USER}`),
+            fetch(`https://api.github.com/users/${GITHUB_USER}/repos?sort=updated&per_page=6`)
+        ]);
 
-// Formulário
-const formulario = document.querySelector("#formulario");
+        const profile = await userRes.json();
+        const repos = await repoRes.json();
 
-// Expressão Regular de validação do e-mail
-const emailRegex = /^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/;
-
-// Função de preenchimento da seção about
-async function getAboutGitHub() {
-  try {
-    // Requisição do tipo GET para a API do GitHub
-    const resposta = await fetch("https://api.github.com/users/evelynlamarca");
-
-    // Converter a Resposta para JSON
-    const perfil = await resposta.json();
-
-    // @ts-ignore
-    about.innerHTML = "";
-
-    // @ts-ignore
-    about.innerHTML = `
-      
-      <!-- Imagem da Seção About -->
-      <figure class="about-image">
-        <img src="${perfil.avatar_url}"
-             alt="${perfil.name}"
-        >
-      </figure>
-
-      <!-- Conteúdo da Seção About -->
-      <article class="about-content">
-
-        <h2>Sobre mim</h2>
-        <p>Desenvolvedor Fullstack especializado em criar aplicações web escaláveis, performáticas e orientadas a resultado.
-
-Atuo no desenvolvimento end-to-end com JavaScript/TypeScript, React, Vue e Node.js, entregando sistemas bem estruturados, APIs robustas e interfaces modernas.
-
-Foco em resolver problemas de negócio com soluções eficientes, seguras e prontas para crescimento.</p>
-     
-
-        <!-- Links (GitHub + Curriculo) e Dados do GitHub -->
-        <div class="about-buttons-data">
-
-          <!-- Links -->
-          <div class="buttons-container">
-            <a href="${perfil.html_url}" target="_blank" class="botao">GitHub</a>
-            <a href="#" target="_blank" class="botao-outline">Currículo</a>
-          </div>
-
-          <!-- Dados - GitHub -->
-          <div class="data-container">
-
-            <!-- Nº de Seguidores -->
-            <div class="data-item">
-              <span class="data-number">${perfil.followers}</span>
-              <span class="data-label">Seguidores</span>
-            </div>
-
-            <!-- Nº de Repositórios Públicos -->
-            <div class="data-item">
-              <span class="data-number">${perfil.public_repos}</span>
-              <span class="data-label">Repositórios</span>
-            </div>
-
-          </div>
-
-        </div>
-      </article>
-
-    `;
-  } catch (error) {
-    console.error("Erro ao buscar dados no GitHub", error);
-  }
-}
-
-// Função buscar os dados dos projetos
-
-async function getProjectsGitHub() {
-  try {
-    // Requisição do tipo GET para a API do GitHub
-    const resposta = await fetch(
-      "https://api.github.com/users/evelynlamarca/repos?sort=updated&per_page=6",
-    );
-
-    // Converter a Resposta para JSON
-    const repositorios = await resposta.json();
-
-    // @ts-ignore
-    swiperWrapper.innerHTML = "";
-
-    // Ícones das linguagens
-    const linguagens = {
-      JavaScript: "javascript",
-      TypeScript: "typescript",
-      Python: "python",
-      Java: "java",
-      HTML: "html",
-      CSS: "css",
-      PHP: "php",
-      "C#": "csharp",
-      Go: "go",
-      Kotlin: "kotlin",
-      Swift: "swift",
-      C: "c",
-      "C++": "c_plus",
-      GitHub: "github",
-    };
-
-    // @ts-ignore
-    repositorios.forEach((repositorio) => {
-      // Seleciona o nome da Linguagem padrão do repositório
-      const linguagem = repositorio.language || "GitHub";
-
-      // Seleciona o ícone da Linguagem padrão do repositório
-      // @ts-ignore
-      const icone = linguagens[linguagem] ?? linguagens["GitHub"];
-
-      // Constrói a URL que aponta para o ícone da Linguagem padrão do repositório
-      const urlIcone = `./assets/icons/languages/${icone}.svg`;
-
-      // Formata o Nome do Repositório
-      const nomeFormatado = repositorio.name
-        .replace(/[-_]/g, " ") // Substitui hifens e underlines por espaços em branco
-        .replace(/[^a-zA-Z0-9\s]/g, "") // Remove Caracteres especiais
-        .replace(/\s+t[a-z0-9]+$/i, "") // Remove a identificação de turma
-        .toUpperCase(); // Converte a string em letras maiúsculas
-
-      // Função para truncar texto
-      // Se a descrição possuir mais de 100 carcateres
-      // seleciona os primeiros 97 e acrescenta '...' no final
-      // Senão retorna o mesmo texto
-      // @ts-ignore
-      const truncar = (texto, limite) =>
-        texto.length > limite ? texto.substring(0, limite) + "..." : texto;
-
-     
-      const descricao = repositorio.description
-        ? truncar(repositorio.description, 100)
-        : "Projeto desenvolvido no GitHub";
-
-     
-      const tags =
-        repositorio.topics?.length > 0
-          ? 
-            repositorio.topics
-              .slice(0, 3)
-              .map((topic) => `<span class="tag">${topic}</span>`)
-              .join("")
-          : `<span class="tag">${linguagem}</span>`;
-
-      // Cria o Botão Deploy
-      const botaoDeploy = repositorio.homepage
-        ? `<a href="${repositorio.homepage}" target="_blank" class="botao-outline botao-sm">Deploy</a>`
-        : "";
-
-      // Botões de ação
-      const botoesAcao = `
-        <div class="project-buttons">
-          <a href="${repositorio.html_url}" target="_blank" class="botao botao-sm">
-            GitHub
-          </a>
-          ${botaoDeploy}
-        </div>
-      `;
-
-      // Constrói o Card
-      // @ts-ignore
-      swiperWrapper.innerHTML += `
-      
-          <div class="swiper-slide">
-
-            <article class="project-card">
-
-              <!-- Ícone da Tecnologia padrão do projeto -->
-              <figure class="project-image">
-                <img src="${urlIcone}"
-                     alt="Ícone - ${linguagem} - Linguagem principal do projeto"
-                >
-              </figure>
-
-              <!-- Conteúdo do Projeto -->
-              <div class="project-content">
-
-                <h3>${nomeFormatado}</h3>
-                <p>${descricao}</p>
-
-                <!-- Tags do Projeto -->
-                <div class="project-tags">
-                  ${tags}
+        // 1. Renderizar Seção Sobre
+        document.getElementById('about').innerHTML = `
+            <div style="background: rgba(168, 85, 247, 0.03); padding: clamp(30px, 5vw, 60px); border-radius: 25px; border: 1px solid rgba(168, 85, 247, 0.1); width: 100%; display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 50px; align-items: center;">
+                <div style="text-align: center;">
+                    <img src="${profile.avatar_url}" style="width: 250px; border-radius: 50%; border: 4px solid var(--primary-lilas); box-shadow: 0 0 30px rgba(168, 85, 247, 0.2);">
                 </div>
+                <div>
+                    <span class="badge">Especialista</span>
+                    <h2 style="font-size: 2.5rem; margin: 15px 0;">Sobre <span style="color: var(--primary-lilas);">Mim</span></h2>
+                    <p style="color: var(--text-dim); line-height: 1.8; font-size: 1.1rem;">${profile.bio || "Focada em construir o futuro da web através de interfaces intuitivas e back-ends robustos."}</p>
+                    <div style="margin-top: 30px; display: flex; gap: 40px;">
+                        <div><h3 style="color: var(--primary-lilas);">${profile.public_repos}</h3><p style="font-size: 0.8rem; color: var(--text-dim);">Repositórios</p></div>
+                        <div><h3 style="color: var(--primary-lilas);">${profile.followers}</h3><p style="font-size: 0.8rem; color: var(--text-dim);">Seguidores</p></div>
+                    </div>
+                </div>
+            </div>
+        `;
 
-                ${botoesAcao}
+        // 2. Renderizar Repositórios no Swiper
+        const reposContainer = document.getElementById('github-projects');
+        reposContainer.innerHTML = repos.map(repo => `
+            <div class="swiper-slide">
+                <div style="background: rgba(255,255,255,0.02); padding: 35px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.05); height: 100%; transition: 0.3s; cursor: default;">
+                    <i class="fas fa-folder-open" style="color: var(--primary-lilas); font-size: 1.5rem; margin-bottom: 20px;"></i>
+                    <h3 style="margin-bottom: 15px; color: var(--text-main); font-size: 1.2rem;">${repo.name.replace(/-/g, ' ')}</h3>
+                    <p style="font-size: 0.9rem; color: var(--text-dim); margin-bottom: 25px; min-height: 50px;">${repo.description || "Explorando novas tecnologias e soluções criativas."}</p>
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <span style="font-size: 0.75rem; color: var(--primary-lilas); font-weight: 600;">● ${repo.language || 'Tech'}</span>
+                        <a href="${repo.html_url}" target="_blank" style="color: var(--text-main); font-size: 1.1rem;"><i class="fab fa-github"></i></a>
+                    </div>
+                </div>
+            </div>
+        `).join('');
 
-              </div>
+        // 3. Inicializar Swiper
+        new Swiper(".projects-swiper", {
+            slidesPerView: 1,
+            spaceBetween: 25,
+            pagination: { el: ".swiper-pagination", clickable: true },
+            breakpoints: {
+                768: { slidesPerView: 2 },
+                1100: { slidesPerView: 3 }
+            }
+        });
 
-            </article>
+    } catch (err) {
+        console.error("Erro na API do GitHub:", err);
+    }
+}
 
-          </div>
-      `;
+// 4. Scroll Reveal (Efeito de aparecimento)
+function handleReveal() {
+    const sections = document.querySelectorAll('.section-container');
+    sections.forEach(s => {
+        const top = s.getBoundingClientRect().top;
+        if (top < window.innerHeight - 100) s.classList.add('active');
     });
-
-    iniciarSwiper();
-  } catch (error) {
-    console.error("Erro ao buscar dados no GitHub", error);
-  }
 }
 
-function iniciarSwiper() {
-  // @ts-ignore
-  new Swiper(".projects-swiper", {
-    slidesPerView: 1,
-    slidesPerGroup: 1,
-    spaceBetween: 24,
-    centeredSlides: false,
-    loop: true,
-    watchOverflow: true,
-
-    breakpoints: {
-      0: {
-        slidesPerView: 1,
-        slidesPerGroup: 1,
-        spaceBetween: 40,
-        centeredSlides: false,
-      },
-      769: {
-        slidesPerView: 2,
-        slidesPerGroup: 2,
-        spaceBetween: 40,
-        centeredSlides: false,
-      },
-      1025: {
-        slidesPerView: 3,
-        slidesPerGroup: 3,
-        spaceBetween: 54,
-        centeredSlides: false,
-      },
-    },
-
-    navigation: {
-      nextEl: ".swiper-button-next",
-      prevEl: ".swiper-button-prev",
-    },
-
-    pagination: {
-      el: ".swiper-pagination",
-      clickable: true,
-      dynamicBullets: true,
-    },
-
-    autoplay: {
-      delay: 5000,
-      pauseOnMouseEnter: true,
-      disableOnInteraction: false,
-    },
-
-    grabCursor: true,
-    slidesOffsetBefore: 0,
-    slidesOffsetAfter: 0,
-  });
-}
-
-// @ts-ignore
-formulario.addEventListener("submit", function (event) {
-  event.preventDefault();
-
-  document
-    .querySelectorAll("form span")
-    .forEach((span) => (span.innerHTML = ""));
-
-  let isValid = true;
-
-  const nome = document.querySelector("#nome");
-  const erroNome = document.querySelector("#erro-nome");
-
-  // @ts-ignore
-  if (nome.value.trim().length < 3) {
-    // @ts-ignore
-    erroNome.innerHTML = "O nome deve ter no mínimo 3 caracteres";
-    // @ts-ignore
-    if (isValid) nome.focus();
-    isValid = false;
-  }
-
-  const email = document.querySelector("#email");
-  const erroEmail = document.querySelector("#erro-email");
-
-  // @ts-ignore
-  if (!email.value.trim().match(emailRegex)) {
-    // @ts-ignore
-    erroEmail.innerHTML = "Digite um endereço de e-mail válido";
-    // @ts-ignore
-    if (isValid) email.focus();
-    isValid = false;
-  }
-
-  const assunto = document.querySelector("#assunto");
-  const erroAssunto = document.querySelector("#erro-assunto");
-
-  // @ts-ignore
-  if (assunto.value.trim().length < 5) {
-    // @ts-ignore
-    erroAssunto.innerHTML = "O assunto deve ter no mínimo 5 caracteres";
-    // @ts-ignore
-    if (isValid) assunto.focus();
-    isValid = false;
-  }
-
-  const mensagem = document.querySelector("#mensagem");
-  const erroMensagem = document.querySelector("#erro-mensagem");
-
- 
-  if (mensagem.value.trim().length === 0) {
-
-    erroMensagem.innerHTML = "A mensagem não pode ser vazia";
-   
-    if (isValid) mensagem.focus();
-    isValid = false;
-  }
-
-  if (isValid) {
-  
-    const submitButton = formulario.querySelector('button[type="submit"]');
-   
-    submitButton.disabled = true;
-    
-    submitButton.textContent = "Enviando...";
-
-    
-    formulario.submit();
-  }
+document.addEventListener("DOMContentLoaded", () => {
+    initializeApp();
+    window.addEventListener('scroll', handleReveal);
+    setTimeout(handleReveal, 500); // Trigger inicial
 });
-
-// executar a função getAboutGitHub
-getAboutGitHub();
-
-// Executar a função getProjects GitHub
-getProjectsGitHub();
