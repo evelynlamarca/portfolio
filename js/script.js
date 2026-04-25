@@ -1,76 +1,452 @@
-const GITHUB_USER = "evelynlamarca";
+// @ts-nocheck
+"use strict";
 
-async function initializeApp() {
-    try {
-        const [userRes, repoRes] = await Promise.all([
-            fetch(`https://api.github.com/users/${GITHUB_USER}`),
-            fetch(`https://api.github.com/users/${GITHUB_USER}/repos?sort=updated&per_page=6`)
-        ]);
+/* ============================================================
+   CONFIGURAÇÕES
+============================================================ */
+const GITHUB_USERNAME = "evelynlamarca";
+const REPOS_COUNT     = 9;
 
-        const profile = await userRes.json();
-        const repos = await repoRes.json();
+/* ============================================================
+   ELEMENTOS DO DOM
+============================================================ */
+const swiperWrapper   = document.querySelector("#swiper-wrapper");
+const projectsLoading = document.querySelector("#projects-loading");
+const projectsSwiper  = document.querySelector("#projects-swiper");
+const formulario      = document.querySelector("#formulario");
 
-        // 1. Renderizar Seção Sobre
-        document.getElementById('about').innerHTML = `
-            <div style="background: rgba(168, 85, 247, 0.03); padding: clamp(30px, 5vw, 60px); border-radius: 25px; border: 1px solid rgba(168, 85, 247, 0.1); width: 100%; display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 50px; align-items: center;">
-                <div style="text-align: center;">
-                    <img src="${profile.avatar_url}" style="width: 250px; border-radius: 50%; border: 4px solid var(--primary-lilas); box-shadow: 0 0 30px rgba(168, 85, 247, 0.2);">
-                </div>
-                <div>
-                    <span class="badge">Especialista</span>
-                    <h2 style="font-size: 2.5rem; margin: 15px 0;">Sobre <span style="color: var(--primary-lilas);">Mim</span></h2>
-                    <p style="color: var(--text-dim); line-height: 1.8; font-size: 1.1rem;">${profile.bio || "Focada em construir o futuro da web através de interfaces intuitivas e back-ends robustos."}</p>
-                    <div style="margin-top: 30px; display: flex; gap: 40px;">
-                        <div><h3 style="color: var(--primary-lilas);">${profile.public_repos}</h3><p style="font-size: 0.8rem; color: var(--text-dim);">Repositórios</p></div>
-                        <div><h3 style="color: var(--primary-lilas);">${profile.followers}</h3><p style="font-size: 0.8rem; color: var(--text-dim);">Seguidores</p></div>
-                    </div>
-                </div>
-            </div>
-        `;
+/* ============================================================
+   VALIDAÇÃO DE E-MAIL
+============================================================ */
+const emailRegex = /^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/;
 
-        // 2. Renderizar Repositórios no Swiper
-        const reposContainer = document.getElementById('github-projects');
-        reposContainer.innerHTML = repos.map(repo => `
-            <div class="swiper-slide">
-                <div style="background: rgba(255,255,255,0.02); padding: 35px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.05); height: 100%; transition: 0.3s; cursor: default;">
-                    <i class="fas fa-folder-open" style="color: var(--primary-lilas); font-size: 1.5rem; margin-bottom: 20px;"></i>
-                    <h3 style="margin-bottom: 15px; color: var(--text-main); font-size: 1.2rem;">${repo.name.replace(/-/g, ' ')}</h3>
-                    <p style="font-size: 0.9rem; color: var(--text-dim); margin-bottom: 25px; min-height: 50px;">${repo.description || "Explorando novas tecnologias e soluções criativas."}</p>
-                    <div style="display: flex; justify-content: space-between; align-items: center;">
-                        <span style="font-size: 0.75rem; color: var(--primary-lilas); font-weight: 600;">● ${repo.language || 'Tech'}</span>
-                        <a href="${repo.html_url}" target="_blank" style="color: var(--text-main); font-size: 1.1rem;"><i class="fab fa-github"></i></a>
-                    </div>
-                </div>
-            </div>
-        `).join('');
+/* ============================================================
+   ÍCONES DE LINGUAGEM — via devicons CDN (coloridos)
+============================================================ */
+const LINGUAGENS_ICONES = {
+  JavaScript: "https://cdn.jsdelivr.net/gh/devicons/devicon/icons/javascript/javascript-original.svg",
+  TypeScript: "https://cdn.jsdelivr.net/gh/devicons/devicon/icons/typescript/typescript-original.svg",
+  Python:     "https://cdn.jsdelivr.net/gh/devicons/devicon/icons/python/python-original.svg",
+  Java:       "https://cdn.jsdelivr.net/gh/devicons/devicon/icons/java/java-original.svg",
+  HTML:       "https://cdn.jsdelivr.net/gh/devicons/devicon/icons/html5/html5-original.svg",
+  CSS:        "https://cdn.jsdelivr.net/gh/devicons/devicon/icons/css3/css3-original.svg",
+  PHP:        "https://cdn.jsdelivr.net/gh/devicons/devicon/icons/php/php-original.svg",
+  "C#":       "https://cdn.jsdelivr.net/gh/devicons/devicon/icons/csharp/csharp-original.svg",
+  Go:         "https://cdn.jsdelivr.net/gh/devicons/devicon/icons/go/go-original.svg",
+  Kotlin:     "https://cdn.jsdelivr.net/gh/devicons/devicon/icons/kotlin/kotlin-original.svg",
+  Swift:      "https://cdn.jsdelivr.net/gh/devicons/devicon/icons/swift/swift-original.svg",
+  C:          "https://cdn.jsdelivr.net/gh/devicons/devicon/icons/c/c-original.svg",
+  "C++":      "https://cdn.jsdelivr.net/gh/devicons/devicon/icons/cplusplus/cplusplus-original.svg",
+  Vue:        "https://cdn.jsdelivr.net/gh/devicons/devicon/icons/vuejs/vuejs-original.svg",
+  React:      "https://cdn.jsdelivr.net/gh/devicons/devicon/icons/react/react-original.svg",
+  Rust:       "https://cdn.jsdelivr.net/gh/devicons/devicon/icons/rust/rust-plain.svg",
+  Ruby:       "https://cdn.jsdelivr.net/gh/devicons/devicon/icons/ruby/ruby-original.svg",
+  Dart:       "https://cdn.jsdelivr.net/gh/devicons/devicon/icons/dart/dart-original.svg",
+  Shell:      "https://cdn.jsdelivr.net/gh/devicons/devicon/icons/bash/bash-original.svg",
+  // Fallback para repos sem linguagem detectada
+  GitHub:     "https://cdn.jsdelivr.net/gh/devicons/devicon/icons/github/github-original.svg",
+};
 
-        // 3. Inicializar Swiper
-        new Swiper(".projects-swiper", {
-            slidesPerView: 1,
-            spaceBetween: 25,
-            pagination: { el: ".swiper-pagination", clickable: true },
-            breakpoints: {
-                768: { slidesPerView: 2 },
-                1100: { slidesPerView: 3 }
-            }
-        });
+/* ============================================================
+   EFEITO DE DIGITAÇÃO — HERO
+============================================================ */
+const textos = [
+  "Olá, eu sou Evelyn Lamarca",
+  "Dev Full Stack",
+  "Criando experiências digitais",
+];
 
-    } catch (err) {
-        console.error("Erro na API do GitHub:", err);
+let textoIndex = 0;
+let charIndex  = 0;
+let apagando   = false;
+const typingEl = document.querySelector("#typing-text");
+
+function typeLoop() {
+  if (!typingEl) return;
+
+  const textoAtual = textos[textoIndex];
+
+  if (!apagando) {
+    typingEl.textContent = textoAtual.substring(0, charIndex + 1);
+    charIndex++;
+    if (charIndex === textoAtual.length) {
+      apagando = true;
+      setTimeout(typeLoop, 2200);
+      return;
     }
+    setTimeout(typeLoop, 60);
+  } else {
+    typingEl.textContent = textoAtual.substring(0, charIndex - 1);
+    charIndex--;
+    if (charIndex === 0) {
+      apagando = false;
+      textoIndex = (textoIndex + 1) % textos.length;
+      setTimeout(typeLoop, 400);
+      return;
+    }
+    setTimeout(typeLoop, 35);
+  }
 }
 
-// 4. Scroll Reveal (Efeito de aparecimento)
-function handleReveal() {
-    const sections = document.querySelectorAll('.section-container');
-    sections.forEach(s => {
-        const top = s.getBoundingClientRect().top;
-        if (top < window.innerHeight - 100) s.classList.add('active');
+/* ============================================================
+   HEADER — STICKY SCROLL + NAV ATIVO
+============================================================ */
+const header = document.querySelector("#header");
+
+window.addEventListener("scroll", () => {
+  if (window.scrollY > 40) {
+    header?.classList.add("scrolled");
+  } else {
+    header?.classList.remove("scrolled");
+  }
+  highlightNav();
+}, { passive: true });
+
+function highlightNav() {
+  const sections = document.querySelectorAll("section[id]");
+  const scrollY  = window.scrollY + 120;
+
+  sections.forEach(section => {
+    const top    = section.offsetTop;
+    const height = section.offsetHeight;
+    const id     = section.getAttribute("id");
+    const link   = document.querySelector(`.nav-link[href="#${id}"]`);
+
+    if (scrollY >= top && scrollY < top + height) {
+      document.querySelectorAll(".nav-link").forEach(l => l.classList.remove("active"));
+      link?.classList.add("active");
+    }
+  });
+}
+
+/* ============================================================
+   HAMBURGER MENU
+============================================================ */
+const hamburger = document.querySelector("#hamburger");
+const navMobile = document.querySelector("#nav-mobile");
+
+hamburger?.addEventListener("click", () => {
+  const isOpen = navMobile?.classList.toggle("open");
+  hamburger.classList.toggle("open", isOpen);
+  hamburger.setAttribute("aria-expanded", String(isOpen));
+});
+
+document.querySelectorAll(".nav-link-mobile").forEach(link => {
+  link.addEventListener("click", () => {
+    navMobile?.classList.remove("open");
+    hamburger?.classList.remove("open");
+    hamburger?.setAttribute("aria-expanded", "false");
+  });
+});
+
+/* ============================================================
+   INTERSECTION OBSERVER — FADE-IN
+============================================================ */
+function initFadeIn() {
+  const elements = document.querySelectorAll(
+    ".section-label, .section-title, .section-sub, " +
+    ".about-content, .about-stats, " +
+    ".contact-info, .contact-form, " +
+    ".hero-content, .hero-figure"
+  );
+
+  elements.forEach(el => el.classList.add("fade-in"));
+
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach((entry, i) => {
+      if (entry.isIntersecting) {
+        setTimeout(() => entry.target.classList.add("visible"), i * 80);
+        observer.unobserve(entry.target);
+      }
     });
+  }, { threshold: 0.12 });
+
+  elements.forEach(el => observer.observe(el));
 }
 
+/* ============================================================
+   GITHUB API — SEÇÃO ABOUT
+============================================================ */
+async function getAboutGitHub() {
+  try {
+    const res    = await fetch(`https://api.github.com/users/${GITHUB_USERNAME}`);
+    if (!res.ok) throw new Error("Falha ao buscar perfil");
+    const perfil = await res.json();
+
+    // Bio
+    const bioEl = document.querySelector("#about-bio");
+    if (bioEl) {
+      bioEl.textContent = perfil.bio ||
+        "Desenvolvedora Fullstack especializada em criar aplicações web escaláveis, " +
+        "performáticas e orientadas a resultado. Atuo com JavaScript/TypeScript, " +
+        "React, Vue e Node.js — entregando sistemas bem estruturados, APIs robustas " +
+        "e interfaces modernas.";
+    }
+
+    // Stats com animação de contagem
+    const followersEl = document.querySelector("#stat-followers");
+    const reposEl     = document.querySelector("#stat-repos");
+    if (followersEl) animateCount(followersEl, perfil.followers    ?? 0);
+    if (reposEl)     animateCount(reposEl,     perfil.public_repos ?? 0);
+
+    // Link GitHub
+    const githubLink = document.querySelector("#about-github-link");
+    if (githubLink) githubLink.href = perfil.html_url;
+
+  } catch (err) {
+    console.error("[About] Erro ao buscar dados do GitHub:", err);
+    const bioEl = document.querySelector("#about-bio");
+    if (bioEl) {
+      bioEl.textContent =
+        "Desenvolvedora Fullstack especializada em criar aplicações web modernas e escaláveis.";
+    }
+  }
+}
+
+/* Animação de contagem numérica */
+function animateCount(el, target) {
+  const duration = 1200;
+  const start    = performance.now();
+
+  function step(now) {
+    const progress = Math.min((now - start) / duration, 1);
+    const eased    = 1 - Math.pow(1 - progress, 3);
+    el.textContent = Math.floor(eased * target).toString();
+    if (progress < 1) requestAnimationFrame(step);
+    else el.textContent = target.toString();
+  }
+
+  requestAnimationFrame(step);
+}
+
+/* ============================================================
+   GITHUB API — PROJETOS
+============================================================ */
+async function getProjectsGitHub() {
+  try {
+    const res = await fetch(
+      `https://api.github.com/users/${GITHUB_USERNAME}/repos?sort=updated&per_page=${REPOS_COUNT}`
+    );
+    if (!res.ok) throw new Error("Falha ao buscar repositórios");
+
+    const repositorios = await res.json();
+
+    if (!Array.isArray(repositorios) || repositorios.length === 0) {
+      showProjectsError("Nenhum repositório encontrado.");
+      return;
+    }
+
+    swiperWrapper.innerHTML = "";
+
+    repositorios.forEach(repo => {
+      // Linguagem detectada pelo GitHub, ou "GitHub" como fallback
+      const linguagem = repo.language || "GitHub";
+
+      // URL do ícone via devicons CDN — colorido, sem precisar de arquivos locais
+      const urlIcone = LINGUAGENS_ICONES[linguagem] ?? LINGUAGENS_ICONES["GitHub"];
+
+      // Formata o nome do repositório
+      const nomeFormatado = repo.name
+        .replace(/[-_]/g, " ")
+        .replace(/[^a-zA-Z0-9\s]/g, "")
+        .replace(/\s+t[a-z0-9]+$/i, "")
+        .toUpperCase();
+
+      // Trunca descrição longa
+      const truncar = (texto, limite) =>
+        texto && texto.length > limite
+          ? texto.substring(0, limite) + "..."
+          : texto;
+
+      const descricao = repo.description
+        ? truncar(repo.description, 100)
+        : "Projeto desenvolvido no GitHub.";
+
+      // Tags: tópicos do repo ou a linguagem
+      const tags =
+        repo.topics?.length > 0
+          ? repo.topics.slice(0, 3).map(t => `<span class="tag">${t}</span>`).join("")
+          : `<span class="tag">${linguagem}</span>`;
+
+      // Botão deploy só aparece se houver homepage
+      const botaoDeploy = repo.homepage
+        ? `<a href="${repo.homepage}" target="_blank" rel="noopener" class="btn btn-ghost btn-sm">Deploy ↗</a>`
+        : "";
+
+      // Monta o slide
+      const slide = document.createElement("div");
+      slide.className = "swiper-slide";
+      slide.innerHTML = `
+        <article class="project-card">
+          <figure class="project-image">
+            <img
+              src="${urlIcone}"
+              alt="Ícone ${linguagem}"
+              loading="lazy"
+              onerror="this.src='https://cdn.jsdelivr.net/gh/devicons/devicon/icons/github/github-original.svg'"
+            />
+          </figure>
+          <div class="project-content">
+            <h3>${nomeFormatado}</h3>
+            <p>${descricao}</p>
+            <div class="project-tags">${tags}</div>
+            <div class="project-buttons">
+              <a href="${repo.html_url}" target="_blank" rel="noopener" class="btn btn-primary btn-sm">GitHub</a>
+              ${botaoDeploy}
+            </div>
+          </div>
+        </article>
+      `;
+
+      swiperWrapper.appendChild(slide);
+    });
+
+    // Esconde loading e exibe o swiper
+    if (projectsLoading) projectsLoading.style.display = "none";
+    if (projectsSwiper)  projectsSwiper.style.opacity  = "1";
+
+    iniciarSwiper();
+
+  } catch (err) {
+    console.error("[Projects] Erro ao buscar repositórios:", err);
+    showProjectsError("Erro ao carregar projetos. Tente novamente.");
+  }
+}
+
+function showProjectsError(msg) {
+  if (projectsLoading) {
+    projectsLoading.innerHTML = `
+      <span style="color: var(--neon); font-family: var(--font-mono); font-size: 0.8rem;">
+        ✗ ${msg}
+      </span>`;
+  }
+}
+
+/* ============================================================
+   INICIAR SWIPER
+============================================================ */
+function iniciarSwiper() {
+  new Swiper(".projects-swiper", {
+    slidesPerView: 1,
+    spaceBetween:  24,
+    loop:          true,
+    grabCursor:    true,
+    watchOverflow: true,
+
+    breakpoints: {
+      640: {
+        slidesPerView: 1,
+        spaceBetween:  24,
+      },
+      768: {
+        slidesPerView:  2,
+        slidesPerGroup: 2,
+        spaceBetween:   24,
+      },
+      1024: {
+        slidesPerView:  3,
+        slidesPerGroup: 3,
+        spaceBetween:   28,
+      },
+    },
+
+    navigation: {
+      nextEl: ".swiper-button-next",
+      prevEl: ".swiper-button-prev",
+    },
+
+    pagination: {
+      el:             ".swiper-pagination",
+      clickable:      true,
+      dynamicBullets: true,
+    },
+
+    autoplay: {
+      delay:                 4500,
+      pauseOnMouseEnter:     true,
+      disableOnInteraction:  false,
+    },
+
+    a11y: {
+      prevSlideMessage: "Slide anterior",
+      nextSlideMessage: "Próximo slide",
+    },
+  });
+}
+
+/* ============================================================
+   FORMULÁRIO DE CONTATO
+============================================================ */
+formulario?.addEventListener("submit", function (e) {
+  e.preventDefault();
+
+  // Limpa erros anteriores
+  document.querySelectorAll(".form-error").forEach(el => (el.textContent = ""));
+  document.querySelectorAll(".form-field input, .form-field textarea")
+    .forEach(el => el.classList.remove("error"));
+
+  let isValid = true;
+
+  function setError(inputId, errorId, msg) {
+    const input = document.querySelector(`#${inputId}`);
+    const error = document.querySelector(`#${errorId}`);
+    if (error) error.textContent = msg;
+    if (input) input.classList.add("error");
+    if (isValid && input) input.focus();
+    isValid = false;
+  }
+
+  const nome     = document.querySelector("#nome");
+  const email    = document.querySelector("#email");
+  const assunto  = document.querySelector("#assunto");
+  const mensagem = document.querySelector("#mensagem");
+
+  if (!nome    || nome.value.trim().length    < 3) setError("nome",     "erro-nome",     "▸ Nome deve ter pelo menos 3 caracteres.");
+  if (!email   || !email.value.trim().match(emailRegex)) setError("email",    "erro-email",    "▸ Digite um endereço de e-mail válido.");
+  if (!assunto || assunto.value.trim().length < 5) setError("assunto",  "erro-assunto",  "▸ Assunto deve ter pelo menos 5 caracteres.");
+  if (!mensagem|| mensagem.value.trim().length=== 0) setError("mensagem","erro-mensagem","▸ A mensagem não pode estar vazia.");
+
+  if (!isValid) return;
+
+  const submitBtn  = document.querySelector("#submit-btn");
+  const submitText = document.querySelector("#submit-text");
+  if (submitBtn)  submitBtn.disabled    = true;
+  if (submitText) submitText.textContent = "Enviando...";
+
+  
+  const assuntoVal = encodeURIComponent(assunto.value.trim());
+  const msgVal     = encodeURIComponent(
+    `De: ${nome.value.trim()} <${email.value.trim()}>\n\n${mensagem.value.trim()}`
+  );
+
+  
+  window.location.href = `mailto:evelynlamarca@icloud.com?subject=${assuntoVal}&body=${msgVal}`;
+
+  setTimeout(() => {
+    formulario.reset();
+    const successEl = document.querySelector("#form-success");
+    if (successEl) {
+      successEl.removeAttribute("hidden");
+      successEl.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    }
+    if (submitBtn)  submitBtn.disabled    = false;
+    if (submitText) submitText.textContent = "Enviar Mensagem";
+    setTimeout(() => successEl?.setAttribute("hidden", ""), 5000);
+  }, 800);
+});
+
+/* ============================================================
+   FOOTER — ANO ATUAL
+============================================================ */
+const footerYear = document.querySelector("#footer-year");
+if (footerYear) footerYear.textContent = new Date().getFullYear().toString();
+
+/* ============================================================
+   INIT
+============================================================ */
 document.addEventListener("DOMContentLoaded", () => {
-    initializeApp();
-    window.addEventListener('scroll', handleReveal);
-    setTimeout(handleReveal, 500); // Trigger inicial
+  initFadeIn();
+  setTimeout(typeLoop, 600);
+  getAboutGitHub();
+  getProjectsGitHub();
 });
